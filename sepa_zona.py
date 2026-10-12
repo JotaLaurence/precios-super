@@ -132,8 +132,19 @@ def pedir(url):
     return urllib.request.Request(url, headers={"User-Agent": "sepa-zona/1.0"})
 
 
+def abrir_con_reintentos(url, timeout=90, intentos=5):
+    for n in range(1, intentos + 1):
+        try:
+            return urllib.request.urlopen(pedir(url), timeout=timeout)
+        except Exception as e:  # noqa: BLE001
+            print(f"  intento {n}/{intentos} fallo: {e}", file=sys.stderr)
+            if n == intentos:
+                raise
+            time.sleep(15 * n)
+
+
 def elegir_recurso(fecha=None):
-    with urllib.request.urlopen(pedir(CKAN_URL), timeout=30) as r:
+    with abrir_con_reintentos(CKAN_URL) as r:
         recursos = json.load(r)["result"]["resources"]
     candidatos = []
     for rec in recursos:
@@ -151,7 +162,7 @@ def elegir_recurso(fecha=None):
 def bajar(url, destino, intentos=3):
     for n in range(1, intentos + 1):
         try:
-            with urllib.request.urlopen(pedir(url), timeout=60) as r, open(destino, "wb") as f:
+            with urllib.request.urlopen(pedir(url), timeout=120) as r, open(destino, "wb") as f:
                 while True:
                     bloque = r.read(1 << 20)
                     if not bloque:
