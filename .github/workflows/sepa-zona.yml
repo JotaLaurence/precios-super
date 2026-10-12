@@ -1,0 +1,34 @@
+name: SEPA zona
+
+on:
+  schedule:
+    - cron: "0 23 * * *"   # 20:00 hora argentina (el archivo del dia sale cerca de las 16:20)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  exportar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Generar datos de la zona
+        run: python sepa_zona.py --salida salida
+
+      - name: Publicar en la rama "datos"
+        run: |
+          cd salida
+          git init -q
+          git config user.name "github-actions"
+          git config user.email "actions@users.noreply.github.com"
+          git checkout -q -b datos
+          git add -A
+          git commit -q -m "Datos SEPA $(date -u +%F)"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" datos
